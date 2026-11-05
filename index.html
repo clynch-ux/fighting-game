@@ -7,45 +7,44 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="game-shell">
-      <div class="hud">
-        <div class="fighter-info">
-          <span class="name">Player 1</span>
-          <div class="health-bar">
-            <div id="p1-health" class="health-fill"></div>
-          </div>
-        </div>
+    <main class="game-shell">
+      <h1>Pixel Clash</h1>
 
+      <section class="selection" aria-label="Character selection">
+        <article class="character-card player-card">
+          <label for="player-choice">Player 1 character</label>
+          <select id="player-choice"></select>
+          <div id="player-stats" class="stats"></div>
+        </article>
+        <article class="character-card cpu-card">
+          <label for="cpu-choice">CPU character</label>
+          <select id="cpu-choice"></select>
+          <div id="cpu-stats" class="stats"></div>
+        </article>
+      </section>
+
+      <section class="hud" aria-label="Fight status">
+        <div class="fighter-info">
+          <span id="player-name" class="name">Player 1</span>
+          <div class="health-bar"><div id="p1-health" class="health-fill"></div></div>
+        </div>
         <div class="center-panel">
           <div id="timer">60</div>
-          <div id="status">FIGHT!</div>
+          <div id="status" aria-live="polite">FIGHT!</div>
         </div>
-
         <div class="fighter-info right">
-          <span class="name">CPU</span>
-          <div class="health-bar">
-            <div id="p2-health" class="health-fill enemy"></div>
-          </div>
+          <span id="cpu-name" class="name">CPU</span>
+          <div class="health-bar"><div id="p2-health" class="health-fill enemy"></div></div>
         </div>
-      </div>
+      </section>
 
-      <canvas id="game" width="960" height="540"></canvas>
+      <canvas id="game" width="960" height="540" aria-label="Fighting game arena"></canvas>
 
-      <div class="controls">
-        <div>
-          <h3>Player 1</h3>
-          <p>Move: A / D</p>
-          <p>Jump: W</p>
-          <p>Attack: F</p>
-        </div>
-        <div>
-          <h3>Player 2</h3>
-          <p>Move: ← / →</p>
-          <p>Jump: ↑</p>
-          <p>Attack: /</p>
-        </div>
-      </div>
-    </div>
+      <section class="controls">
+        <p><strong>Move:</strong> A / D &nbsp; <strong>Jump:</strong> W &nbsp; <strong>Attack:</strong> F &nbsp; <strong>Block:</strong> S</p>
+        <p><strong>Restart:</strong> R</p>
+      </section>
+    </main>
 
     <script src="script.js"></script>
   </body>
