@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixel Clash</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="game-shell">
+      <div class="hud">
+        <div class="fighter-info">
+          <span class="name">Player 1</span>
+          <div class="health-bar">
+            <div id="p1-health" class="health-fill"></div>
+          </div>
+        </div>
+
+        <div class="center-panel">
+          <div id="timer">60</div>
+          <div id="status">FIGHT!</div>
+        </div>
+
+        <div class="fighter-info right">
+          <span class="name">CPU</span>
+          <div class="health-bar">
+            <div id="p2-health" class="health-fill enemy"></div>
+          </div>
+        </div>
+      </div>
+
+      <canvas id="game" width="960" height="540"></canvas>
+
+      <div class="controls">
+        <div>
+          <h3>Player 1</h3>
+          <p>Move: A / D</p>
+          <p>Jump: W</p>
+          <p>Attack: F</p>
+        </div>
+        <div>
+          <h3>Player 2</h3>
+          <p>Move: ← / →</p>
+          <p>Jump: ↑</p>
+          <p>Attack: /</p>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

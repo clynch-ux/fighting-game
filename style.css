@@ -1,0 +1,118 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at top, #243b55, #0f172a 60%);
+  font-family: Arial, Helvetica, sans-serif;
+  color: white;
+}
+
+.game-shell {
+  width: min(96vw, 980px);
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 2px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.hud {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 18px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.fighter-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fighter-info.right {
+  text-align: right;
+}
+
+.name {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.health-bar {
+  height: 18px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.14);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.health-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #22c55e, #84cc16);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+
+.health-fill.enemy {
+  background: linear-gradient(90deg, #ef4444, #f97316);
+}
+
+.center-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+#timer {
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+#status {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f8fafc;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+  border: 3px solid rgba(148, 163, 184, 0.4);
+  background: linear-gradient(#7dd3fc 0%, #fef3c7 36%, #86efac 37%, #15803d 100%);
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 16px;
+  padding-top: 10px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.controls h3 {
+  margin: 0 0 8px 0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.controls p {
+  margin: 2px 0;
+  font-size: 0.9rem;
+}
