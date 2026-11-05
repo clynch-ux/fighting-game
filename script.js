@@ -1,274 +1,351 @@
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const timerEl = document.getElementById('timer');
-const statusEl = document.getElementById('status');
-const p1HealthEl = document.getElementById('p1-health');
-const p2HealthEl = document.getElementById('p2-health');
-const playerChoice = document.getElementById('player-choice');
-const cpuChoice = document.getElementById('cpu-choice');
-const playerStats = document.getElementById('player-stats');
-const cpuStats = document.getElementById('cpu-stats');
-const groundY = 430;
-const gravity = 0.8;
-const keys = {};
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+(() => {
+  const roster = {
+    swift: { name: 'Swift', style: 'Speed specialist', color: '#38bdf8', speed: 9, power: 5, guard: 5, jump: 9 },
+    titan: { name: 'Titan', style: 'Heavy hitter', color: '#fb923c', speed: 4, power: 10, guard: 8, jump: 5 },
+    balanced: { name: 'Balanced', style: 'All-rounder', color: '#a78bfa', speed: 7, power: 7, guard: 7, jump: 7 },
+    guardian: { name: 'Guardian', style: 'Defensive expert', color: '#34d399', speed: 5, power: 6, guard: 10, jump: 6 }
+  };
 
-// Ratings affect movement speed, attack damage, blocking strength, and jump height.
-const roster = {
-  swift: { name: 'Swift', color: '#38bdf8', speed: 6.4, power: 8, guard: 5, jump: 16 },
-  titan: { name: 'Titan', color: '#f97316', speed: 3.8, power: 16, guard: 9, jump: 12 },
-  balanced: { name: 'Balanced', color: '#a78bfa', speed: 5, power: 12, guard: 7, jump: 14 },
-  guardian: { name: 'Guardian', color: '#34d399', speed: 4.4, power: 10, guard: 10, jump: 13 }
-};
+  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+  const savedChoice = () => {
+    try { return localStorage.getItem('pixelClashFighter'); } catch { return null; }
+  };
+  const saveChoices = (player, cpu) => {
+    try {
+      localStorage.setItem('pixelClashFighter', player);
+      localStorage.setItem('pixelClashCPU', cpu);
+    } catch { /* The game still works if browser storage is disabled. */ }
+  };
 
-function ratingsHTML(character) {
-  const rating = (value) => `${value}/10`;
-  return `<span class="stat">Speed<strong>${rating(Math.round(character.speed * 1.5))}</strong></span>
-    <span class="stat">Power<strong>${rating(Math.round(character.power / 1.6))}</strong></span>
-    <span class="stat">Guard<strong>${rating(character.guard)}</strong></span>
-    <span class="stat">Jump<strong>${rating(Math.round(character.jump / 1.8))}</strong></span>`;
-}
-
-for (const [id, character] of Object.entries(roster)) {
-  playerChoice.add(new Option(character.name, id));
-  cpuChoice.add(new Option(character.name, id));
-}
-cpuChoice.value = 'titan';
-
-class Fighter {
-  constructor(x, characterId, controls, isCPU = false) {
-    this.startX = x;
-    this.controls = controls;
-    this.isCPU = isCPU;
-    this.x = x;
-    this.y = groundY;
-    this.width = 72;
-    this.height = 110;
-    this.vx = 0;
-    this.vy = 0;
-    this.health = 100;
-    this.hitFlash = 0;
-    this.isAttacking = false;
-    this.attackTimer = 0;
-    this.attackCooldown = 0;
-    this.hitThisAttack = false;
-    this.blocking = false;
-    this.setCharacter(characterId);
+  function portrait(color, id) {
+    const accents = {
+      swift: '<path d="M22 30h36l-5 10H27z" fill="#e0f2fe"/><path d="M20 27l-9-9 4 17 10 2M60 27l9-9-4 17-10 2" fill="#e0f2fe"/>',
+      titan: '<path d="M20 20l8-10 10 7 10-7 12 10-5 12H25z" fill="#fed7aa"/><path d="M28 34h24v7H28z" fill="#7c2d12"/>',
+      balanced: '<path d="M19 18l9-8h24l9 8-4 8H23z" fill="#ede9fe"/><path d="M28 31h24v6H28z" fill="#4c1d95"/>',
+      guardian: '<path d="M18 16l12-8h20l12 8-4 18H22z" fill="#d1fae5"/><path d="M29 30h22v8H29z" fill="#064e3b"/>'
+    };
+    return `<svg viewBox="0 0 80 100" role="img" aria-label="${roster[id].name} fighter">
+      <path d="M24 50h32l8 34H16z" fill="${color}"/><path d="M26 78h12v19H23zM43 78h12l6 19H42z" fill="#172033"/>
+      <path d="M17 51h11v27H13zM52 51h11l5 27H55z" fill="${color}"/><circle cx="40" cy="30" r="19" fill="#f2c9a5"/>
+      ${accents[id]}<path d="M31 31h5M44 31h5" stroke="#172033" stroke-width="3" stroke-linecap="round"/>
+    </svg>`;
   }
 
-  setCharacter(characterId) {
-    this.character = roster[characterId];
-    this.color = this.character.color;
-    this.speed = this.character.speed;
-    this.jumpStrength = this.character.jump;
-    this.attackDamage = this.character.power;
-    this.guard = this.character.guard;
+  function statMarkup(character) {
+    return [['Speed', character.speed], ['Power', character.power], ['Guard', character.guard], ['Jump', character.jump]]
+      .map(([label, value]) => `<div class="stat-row"><span>${label}</span><span class="stat-meter"><i style="width:${value * 10}%"></i></span><span class="stat-value">${value}</span></div>`)
+      .join('');
   }
 
-  reset(x = this.startX) {
-    this.x = x;
-    this.y = groundY;
-    this.vx = 0;
-    this.vy = 0;
-    this.health = 100;
-    this.hitFlash = 0;
-    this.isAttacking = false;
-    this.attackTimer = 0;
-    this.attackCooldown = 0;
-    this.hitThisAttack = false;
-    this.blocking = false;
-  }
+  function setupMenu() {
+    const cards = document.getElementById('character-roster');
+    if (!cards) return;
 
-  update(opponent, input) {
-    this.facing = opponent.x >= this.x ? 1 : -1;
-    this.blocking = Boolean(input.block) && this.y >= groundY - 1;
+    let selectedId = roster[savedChoice()] ? savedChoice() : 'swift';
+    const selectedName = document.getElementById('selected-name');
+    const opponentName = document.getElementById('opponent-name');
 
-    if (!this.blocking) {
-      if (input.left) this.vx = -this.speed;
-      else if (input.right) this.vx = this.speed;
-      else this.vx *= 0.72;
-      if (Math.abs(this.vx) < 0.35) this.vx = 0;
-
-      if (input.jump && this.y >= groundY - 1) this.vy = -this.jumpStrength;
-      if (input.attack && this.attackCooldown <= 0) this.startAttack();
-    } else {
-      this.vx *= 0.55;
+    function render() {
+      cards.innerHTML = Object.entries(roster).map(([id, character]) => `
+        <button class="character-card ${id === selectedId ? 'selected' : ''}" type="button" data-character="${id}" aria-pressed="${id === selectedId}" style="--fighter-color:${character.color}">
+          <span class="selection-mark" aria-hidden="true">✓</span>
+          <span class="portrait">${portrait(character.color, id)}</span>
+          <span class="character-name">${character.name}</span>
+          <span class="character-style">${character.style}</span>
+          <span class="stat-list">${statMarkup(character)}</span>
+        </button>`).join('');
+      selectedName.textContent = roster[selectedId].name;
+      const opponents = Object.keys(roster).filter(id => id !== selectedId);
+      const preview = opponents[Math.floor(Math.random() * opponents.length)];
+      opponentName.textContent = roster[preview].name;
+      cards.querySelectorAll('[data-character]').forEach(card => {
+        card.addEventListener('click', () => {
+          selectedId = card.dataset.character;
+          render();
+        });
+      });
     }
 
-    this.x = clamp(this.x + this.vx, 35, canvas.width - 105);
-    this.vy += gravity;
-    this.y += this.vy;
-    if (this.y > groundY) { this.y = groundY; this.vy = 0; }
-
-    if (this.attackCooldown > 0) this.attackCooldown--;
-    if (this.hitFlash > 0) this.hitFlash--;
-    if (this.isAttacking && --this.attackTimer <= 0) this.isAttacking = false;
-    this.handleAttackHit(opponent);
-  }
-
-  startAttack() {
-    this.isAttacking = true;
-    this.attackTimer = 16;
-    this.attackCooldown = 28;
-    this.hitThisAttack = false;
-  }
-
-  handleAttackHit(opponent) {
-    if (!this.isAttacking || this.hitThisAttack) return;
-    const distance = Math.abs((opponent.x + opponent.width / 2) - (this.x + this.width / 2));
-    const verticalOverlap = Math.abs(opponent.y - this.y) < 85;
-    const facingCorrect = this.facing === 1 ? opponent.x > this.x : opponent.x < this.x;
-    if (distance > 82 || !verticalOverlap || !facingCorrect) return;
-
-    this.hitThisAttack = true;
-    const damage = opponent.blocking
-      ? Math.max(1, Math.round(this.attackDamage * (1 - opponent.guard * 0.075)))
-      : this.attackDamage;
-    opponent.health = clamp(opponent.health - damage, 0, 100);
-    opponent.hitFlash = opponent.blocking ? 4 : 10;
-    opponent.vx += this.facing * (opponent.blocking ? 2 : 7);
-    statusEl.textContent = opponent.blocking ? `${opponent.character.name} blocks!` : `${this.character.name} lands a hit!`;
-  }
-
-  draw() {
-    const x = this.x;
-    const y = this.y;
-    ctx.save();
-    ctx.translate(x + this.width / 2, y + this.height / 2);
-    ctx.scale(this.facing, 1);
-    ctx.translate(-(x + this.width / 2), -(y + this.height / 2));
-
-    ctx.fillStyle = this.hitFlash > 0 ? '#fff' : this.color;
-    ctx.fillRect(x + 14, y + 16, 44, 52);
-    ctx.fillRect(x + 8, y + 30, 14, 38);
-    ctx.fillRect(x + 50, y + 30, 14, 38);
-    ctx.fillRect(x + 18, y + 68, 18, 36);
-    ctx.fillRect(x + 34, y + 68, 18, 36);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(x + 6, y + 8, 18, 18);
-    ctx.fillRect(x + 48, y + 8, 18, 18);
-
-    if (this.blocking) {
-      ctx.strokeStyle = '#67e8f9';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.arc(x + this.width / 2, y + 48, 42, -Math.PI / 2, Math.PI / 2);
-      ctx.stroke();
-    }
-    if (this.isAttacking) {
-      ctx.fillStyle = '#fff3a3';
-      ctx.fillRect(x + this.width - 2, y + 28, 24, 18);
-    }
-    ctx.restore();
-  }
-}
-
-const p1 = new Fighter(180, playerChoice.value, { left: 'a', right: 'd', jump: 'w', attack: 'f', block: 's' });
-const p2 = new Fighter(660, cpuChoice.value, {}, true);
-let timer = 60;
-let isGameOver = false;
-let lastTime = 0;
-let cpuJumpWait = 0;
-let cpuAttackWait = 0;
-
-function updateSelection() {
-  playerStats.innerHTML = ratingsHTML(roster[playerChoice.value]);
-  cpuStats.innerHTML = ratingsHTML(roster[cpuChoice.value]);
-  document.getElementById('player-name').textContent = `Player 1 — ${roster[playerChoice.value].name}`;
-  document.getElementById('cpu-name').textContent = `CPU — ${roster[cpuChoice.value].name}`;
-}
-
-function resetRound() {
-  p1.setCharacter(playerChoice.value);
-  p2.setCharacter(cpuChoice.value);
-  p1.reset(180);
-  p2.reset(660);
-  timer = 60;
-  isGameOver = false;
-  cpuJumpWait = 0;
-  cpuAttackWait = 0;
-  statusEl.textContent = 'FIGHT!';
-  updateHUD();
-}
-
-function updateHUD() {
-  p1HealthEl.style.width = `${p1.health}%`;
-  p2HealthEl.style.width = `${p2.health}%`;
-  timerEl.textContent = Math.ceil(timer);
-}
-
-function gameOver() {
-  isGameOver = true;
-  const winner = p1.health === p2.health ? 'Draw!' : p1.health > p2.health ? 'Player 1 wins!' : 'CPU wins!';
-  statusEl.textContent = `${winner} Press R to play again.`;
-}
-
-function updateAI() {
-  const distance = p1.x - p2.x;
-  const absoluteDistance = Math.abs(distance);
-  const input = { left: false, right: false, jump: false, attack: false, block: false };
-  if (absoluteDistance > 88) {
-    input.left = distance < 0;
-    input.right = distance > 0;
-  } else {
-    // CPU blocks some incoming attacks and attacks when it has an opening.
-    input.block = p1.isAttacking && Math.random() < 0.75;
-    if (!input.block && cpuAttackWait <= 0) {
-      input.attack = true;
-      cpuAttackWait = 38;
-    }
-  }
-  if (cpuAttackWait > 0) cpuAttackWait--;
-  if (cpuJumpWait <= 0 && Math.random() < 0.012) {
-    input.jump = true;
-    cpuJumpWait = 70;
-  }
-  if (cpuJumpWait > 0) cpuJumpWait--;
-  return input;
-}
-
-function drawArena() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#3b82f6';
-  ctx.fillRect(0, 0, canvas.width, 300);
-  ctx.fillStyle = '#fcd34d';
-  ctx.fillRect(0, 300, canvas.width, 60);
-  ctx.fillStyle = '#166534';
-  ctx.fillRect(0, 360, canvas.width, 180);
-  ctx.fillStyle = '#334155';
-  for (let i = 0; i < 10; i++) ctx.fillRect(80 + i * 90, 200 + (i % 2) * 12, 26, 26);
-  p1.draw();
-  p2.draw();
-}
-
-function loop(timestamp) {
-  const delta = lastTime ? Math.min((timestamp - lastTime) / 1000, 0.05) : 0;
-  lastTime = timestamp;
-  if (!isGameOver) {
-    timer = Math.max(0, timer - delta);
-    p1.update(p2, {
-      left: keys.a, right: keys.d, jump: keys.w, attack: keys.f, block: keys.s
+    render();
+    document.getElementById('fight-button').addEventListener('click', () => {
+      const opponents = Object.keys(roster).filter(id => id !== selectedId);
+      const cpuId = opponents[Math.floor(Math.random() * opponents.length)];
+      saveChoices(selectedId, cpuId);
+      window.location.href = 'fight.html';
     });
-    p2.update(p1, updateAI());
-    if (p1.health <= 0 || p2.health <= 0 || timer <= 0) gameOver();
-    updateHUD();
   }
-  drawArena();
-  requestAnimationFrame(loop);
-}
 
-window.addEventListener('keydown', (event) => {
-  const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-  keys[key] = true;
-  if (key === 'r') resetRound();
-  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(key)) event.preventDefault();
-});
-window.addEventListener('keyup', (event) => {
-  const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-  delete keys[key];
-});
-playerChoice.addEventListener('change', () => { updateSelection(); resetRound(); });
-cpuChoice.addEventListener('change', () => { updateSelection(); resetRound(); });
-updateSelection();
-updateHUD();
-requestAnimationFrame(loop);
+  function setupFight() {
+    const canvas = document.getElementById('game');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const groundY = 430;
+    const gravity = 0.78;
+    const keys = Object.create(null);
+    let timer = 60;
+    let gameOver = false;
+    let lastTimestamp = 0;
+    let cpuAttackWait = 0;
+    let cpuBlockWait = 0;
+    let cpuJumpWait = 0;
+
+    let playerId = 'swift';
+    let cpuId = 'titan';
+    try {
+      const savedPlayer = localStorage.getItem('pixelClashFighter');
+      const savedCPU = localStorage.getItem('pixelClashCPU');
+      if (roster[savedPlayer]) playerId = savedPlayer;
+      if (roster[savedCPU]) cpuId = savedCPU;
+    } catch { /* Defaults are used when browser storage is disabled. */ }
+
+    class Fighter {
+      constructor(x, id, isCPU = false) {
+        this.startX = x;
+        this.isCPU = isCPU;
+        this.width = 72;
+        this.height = 110;
+        this.facing = isCPU ? -1 : 1;
+        this.setCharacter(id);
+        this.reset(x);
+      }
+
+      setCharacter(id) {
+        this.id = id;
+        this.character = roster[id];
+      }
+
+      reset(x = this.startX) {
+        this.x = x;
+        this.y = groundY;
+        this.vx = 0;
+        this.vy = 0;
+        this.health = 100;
+        this.hitFlash = 0;
+        this.attackCooldown = 0;
+        this.attackTimer = 0;
+        this.isAttacking = false;
+        this.hitThisAttack = false;
+        this.blocking = false;
+      }
+
+      update(opponent, input) {
+        this.facing = opponent.x >= this.x ? 1 : -1;
+        this.blocking = Boolean(input.block) && this.y >= groundY - 1;
+
+        if (this.blocking) {
+          this.vx *= 0.55;
+        } else {
+          if (input.left) this.vx = -this.character.speed * 0.58;
+          else if (input.right) this.vx = this.character.speed * 0.58;
+          else this.vx *= 0.76;
+          if (Math.abs(this.vx) < 0.25) this.vx = 0;
+          if (input.jump && this.y >= groundY - 1) this.vy = -(9 + this.character.jump * 0.48);
+          if (input.attack && this.attackCooldown <= 0) this.startAttack();
+        }
+
+        this.x = clamp(this.x + this.vx, 30, canvas.width - this.width - 30);
+        this.vy += gravity;
+        this.y += this.vy;
+        if (this.y > groundY) { this.y = groundY; this.vy = 0; }
+        if (this.attackCooldown > 0) this.attackCooldown--;
+        if (this.attackTimer > 0 && --this.attackTimer === 0) this.isAttacking = false;
+        if (this.hitFlash > 0) this.hitFlash--;
+        this.resolveHit(opponent);
+      }
+
+      startAttack() {
+        this.isAttacking = true;
+        this.attackTimer = 17;
+        this.attackCooldown = 30;
+        this.hitThisAttack = false;
+      }
+
+      resolveHit(opponent) {
+        if (!this.isAttacking || this.hitThisAttack) return;
+        const distance = Math.abs((opponent.x + opponent.width / 2) - (this.x + this.width / 2));
+        if (distance > 83 || Math.abs(opponent.y - this.y) > 85) return;
+        if ((this.facing === 1 && opponent.x < this.x) || (this.facing === -1 && opponent.x > this.x)) return;
+
+        this.hitThisAttack = true;
+        const rawDamage = 5 + this.character.power * 1.05;
+        const damage = opponent.blocking
+          ? Math.max(1, Math.round(rawDamage * (1 - opponent.character.guard * 0.075)))
+          : Math.round(rawDamage);
+        opponent.health = clamp(opponent.health - damage, 0, 100);
+        opponent.hitFlash = opponent.blocking ? 5 : 10;
+        opponent.vx += this.facing * (opponent.blocking ? 1.5 : 6);
+        document.getElementById('status').textContent = opponent.blocking ? 'BLOCKED!' : 'HIT!';
+      }
+
+      draw() {
+        const x = this.x;
+        const y = this.y;
+        ctx.save();
+        ctx.translate(x + this.width / 2, 0);
+        ctx.scale(this.facing, 1);
+        ctx.translate(-(x + this.width / 2), 0);
+        ctx.fillStyle = '#07101b55';
+        ctx.beginPath();
+        ctx.ellipse(x + this.width / 2, groundY + 105, 37, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const color = this.hitFlash ? '#ffffff' : this.character.color;
+        ctx.fillStyle = color;
+        ctx.fillRect(x + 14, y + 34, 44, 49);
+        ctx.fillRect(x + 8, y + 47, 14, 35);
+        ctx.fillRect(x + 50, y + 47, 14, 35);
+        ctx.fillRect(x + 18, y + 82, 18, 30);
+        ctx.fillRect(x + 36, y + 82, 18, 30);
+        ctx.fillStyle = '#f2c9a5';
+        ctx.fillRect(x + 18, y + 8, 36, 31);
+        ctx.fillStyle = '#172033';
+        ctx.fillRect(x + (this.facing === 1 ? 42 : 23), y + 19, 5, 5);
+        ctx.fillStyle = color;
+        ctx.fillRect(x + 14, y + 5, 44, 10);
+
+        if (this.blocking) {
+          ctx.strokeStyle = '#a5f3fc';
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.arc(x + this.width / 2, y + 57, 48, -Math.PI / 2, Math.PI / 2);
+          ctx.stroke();
+        }
+        if (this.isAttacking) {
+          ctx.fillStyle = '#fff3a3';
+          ctx.fillRect(x + this.width - 1, y + 52, 28, 16);
+        }
+        ctx.restore();
+      }
+    }
+
+    const player = new Fighter(180, playerId);
+    const cpu = new Fighter(700, cpuId, true);
+
+    function statSummary(character) {
+      return `SPD ${character.speed} · POW ${character.power} · GRD ${character.guard} · JMP ${character.jump}`;
+    }
+    document.getElementById('player-name').textContent = roster[playerId].name.toUpperCase();
+    document.getElementById('cpu-name').textContent = `CPU · ${roster[cpuId].name.toUpperCase()}`;
+    document.getElementById('player-mini-stats').textContent = statSummary(roster[playerId]);
+    document.getElementById('cpu-mini-stats').textContent = statSummary(roster[cpuId]);
+
+    function updateHud() {
+      document.getElementById('player-health').style.width = `${player.health}%`;
+      document.getElementById('cpu-health').style.width = `${cpu.health}%`;
+      document.getElementById('player-health-number').textContent = Math.ceil(player.health);
+      document.getElementById('cpu-health-number').textContent = Math.ceil(cpu.health);
+      document.getElementById('timer').textContent = Math.ceil(timer);
+    }
+
+    function resetRound() {
+      player.reset(180);
+      cpu.reset(700);
+      timer = 60;
+      gameOver = false;
+      cpuAttackWait = 0;
+      cpuBlockWait = 0;
+      cpuJumpWait = 0;
+      lastTimestamp = 0;
+      document.getElementById('end-screen').hidden = true;
+      document.getElementById('status').textContent = 'FIGHT!';
+      updateHud();
+    }
+
+    function finishRound() {
+      if (gameOver) return;
+      gameOver = true;
+      const title = player.health === cpu.health ? 'DRAW!' : player.health > cpu.health ? 'YOU WIN!' : 'CPU WINS!';
+      document.getElementById('result-title').textContent = title;
+      document.getElementById('result-detail').textContent = `${roster[playerId].name} vs ${roster[cpuId].name} · ${Math.ceil(timer)} seconds left`;
+      document.getElementById('end-screen').hidden = false;
+      document.getElementById('status').textContent = 'ROUND OVER';
+    }
+
+    function cpuInput() {
+      const deltaX = player.x - cpu.x;
+      const distance = Math.abs(deltaX);
+      const input = { left: false, right: false, jump: false, attack: false, block: false };
+      if (distance > 80) {
+        input.left = deltaX < 0;
+        input.right = deltaX > 0;
+      } else if (player.isAttacking && cpuBlockWait <= 0 && Math.random() < 0.42) {
+        input.block = true;
+        cpuBlockWait = 38;
+      } else if (cpuAttackWait <= 0) {
+        input.attack = true;
+        cpuAttackWait = Math.max(24, 48 - roster[cpuId].speed);
+      }
+      if (cpuAttackWait > 0) cpuAttackWait--;
+      if (cpuBlockWait > 0) cpuBlockWait--;
+      if (cpuJumpWait <= 0 && Math.random() < 0.008) {
+        input.jump = true;
+        cpuJumpWait = 65;
+      }
+      if (cpuJumpWait > 0) cpuJumpWait--;
+      return input;
+    }
+
+    function drawArena() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const sky = ctx.createLinearGradient(0, 0, 0, 390);
+      sky.addColorStop(0, '#2563a6');
+      sky.addColorStop(1, '#a5d7e8');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#d7e5a1';
+      ctx.beginPath();
+      ctx.moveTo(0, 324);
+      ctx.lineTo(130, 235);
+      ctx.lineTo(255, 325);
+      ctx.lineTo(415, 215);
+      ctx.lineTo(590, 325);
+      ctx.lineTo(750, 230);
+      ctx.lineTo(960, 330);
+      ctx.lineTo(960, 430);
+      ctx.lineTo(0, 430);
+      ctx.fill();
+      ctx.fillStyle = '#86b75d';
+      ctx.fillRect(0, 430, canvas.width, 110);
+      ctx.fillStyle = '#5c8a47';
+      ctx.fillRect(0, 430, canvas.width, 12);
+      ctx.fillStyle = '#34445a';
+      for (let i = 0; i < 10; i++) {
+        ctx.fillRect(50 + i * 95, 195 + (i % 2) * 16, 25, 25);
+      }
+      player.draw();
+      cpu.draw();
+    }
+
+    function loop(timestamp) {
+      const delta = lastTimestamp ? Math.min((timestamp - lastTimestamp) / 1000, 0.05) : 0;
+      lastTimestamp = timestamp;
+      if (!gameOver) {
+        timer = Math.max(0, timer - delta);
+        player.update(cpu, { left: keys.a, right: keys.d, jump: keys.w, attack: keys.f, block: keys.s });
+        cpu.update(player, cpuInput());
+        updateHud();
+        if (player.health <= 0 || cpu.health <= 0 || timer <= 0) finishRound();
+      }
+      drawArena();
+      requestAnimationFrame(loop);
+    }
+
+    document.getElementById('rematch-button').addEventListener('click', resetRound);
+    document.getElementById('rematch-top').addEventListener('click', resetRound);
+    window.addEventListener('keydown', event => {
+      const key = event.key.toLowerCase();
+      if (['a', 'd', 'w', 'f', 's', 'r'].includes(key)) event.preventDefault();
+      keys[key] = true;
+      if (key === 'r') resetRound();
+    });
+    window.addEventListener('keyup', event => { delete keys[event.key.toLowerCase()]; });
+    window.addEventListener('blur', () => { for (const key of Object.keys(keys)) delete keys[key]; });
+
+    updateHud();
+    document.getElementById('status').textContent = 'FIGHT!';
+    requestAnimationFrame(loop);
+  }
+
+  setupMenu();
+  setupFight();
+})();

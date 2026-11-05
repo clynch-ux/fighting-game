@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#101827" />
+  <title>Pixel Clash — Fight!</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="shell fight-shell">
+    <header class="fight-header">
+      <a class="text-link" href="index.html">← Change fighter</a>
+      <div class="fight-title"><p class="eyebrow">THE ARENA</p><h1>PIXEL <span>CLASH</span></h1></div>
+      <button id="rematch-top" class="button button-small" type="button">Rematch</button>
+    </header>
+
+    <section class="fight-hud" aria-label="Fight status">
+      <div class="fighter-hud">
+        <div class="hud-name-row"><strong id="player-name">PLAYER</strong><span id="player-health-number">100</span></div>
+        <div class="health-track"><div id="player-health" class="health-fill player-fill"></div></div>
+        <div id="player-mini-stats" class="mini-stats"></div>
+      </div>
+      <div class="round-info"><strong id="timer">60</strong><span id="status" aria-live="polite">GET READY!</span></div>
+      <div class="fighter-hud cpu-hud">
+        <div class="hud-name-row"><strong id="cpu-name">CPU</strong><span id="cpu-health-number">100</span></div>
+        <div class="health-track"><div id="cpu-health" class="health-fill cpu-fill"></div></div>
+        <div id="cpu-mini-stats" class="mini-stats"></div>
+      </div>
+    </section>
+
+    <div class="arena-wrap">
+      <canvas id="game" width="960" height="540" aria-label="Fighting game arena"></canvas>
+      <div id="end-screen" class="end-screen" hidden>
+        <div class="end-card">
+          <p class="eyebrow">MATCH COMPLETE</p>
+          <h2 id="result-title">You win!</h2>
+          <p id="result-detail">Ready for another round?</p>
+          <div class="end-actions">
+            <button id="rematch-button" class="button button-primary" type="button">PLAY AGAIN</button>
+            <a class="button button-secondary" href="index.html">CHARACTER MENU</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="controls-bar" aria-label="Controls">
+      <span><kbd>A</kbd><kbd>D</kbd> Move</span>
+      <span><kbd>W</kbd> Jump</span>
+      <span><kbd>F</kbd> Attack</span>
+      <span><kbd>S</kbd> Block</span>
+      <span><kbd>R</kbd> Rematch</span>
+    </section>
+    <p class="touch-hint">Tip: hold S to block and reduce incoming damage.</p>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>

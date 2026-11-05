@@ -1,51 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pixel Clash</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <main class="game-shell">
-      <h1>Pixel Clash</h1>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#101827" />
+  <title>Pixel Clash — Choose Your Fighter</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="shell menu-shell">
+    <header class="brand">
+      <p class="eyebrow">RETRO ARCADE FIGHTER</p>
+      <h1>PIXEL <span>CLASH</span></h1>
+      <p class="subtitle">Choose your fighter. Step into the arena. Make your move.</p>
+    </header>
 
-      <section class="selection" aria-label="Character selection">
-        <article class="character-card player-card">
-          <label for="player-choice">Player 1 character</label>
-          <select id="player-choice"></select>
-          <div id="player-stats" class="stats"></div>
-        </article>
-        <article class="character-card cpu-card">
-          <label for="cpu-choice">CPU character</label>
-          <select id="cpu-choice"></select>
-          <div id="cpu-stats" class="stats"></div>
-        </article>
-      </section>
-
-      <section class="hud" aria-label="Fight status">
-        <div class="fighter-info">
-          <span id="player-name" class="name">Player 1</span>
-          <div class="health-bar"><div id="p1-health" class="health-fill"></div></div>
+    <section class="selection-panel" aria-labelledby="choose-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">PLAYER 1</p>
+          <h2 id="choose-title">Choose your character</h2>
         </div>
-        <div class="center-panel">
-          <div id="timer">60</div>
-          <div id="status" aria-live="polite">FIGHT!</div>
-        </div>
-        <div class="fighter-info right">
-          <span id="cpu-name" class="name">CPU</span>
-          <div class="health-bar"><div id="p2-health" class="health-fill enemy"></div></div>
-        </div>
-      </section>
+        <p class="keyboard-hint">Use the cards to see each fighter's stats</p>
+      </div>
+      <div id="character-roster" class="character-roster" aria-label="Available fighters"></div>
+    </section>
 
-      <canvas id="game" width="960" height="540" aria-label="Fighting game arena"></canvas>
+    <section class="matchup" aria-live="polite">
+      <div class="matchup-fighter">
+        <span class="matchup-label">YOUR FIGHTER</span>
+        <strong id="selected-name">Swift</strong>
+      </div>
+      <span class="versus">VS</span>
+      <div class="matchup-fighter opponent-preview">
+        <span class="matchup-label">RANDOM CPU OPPONENT</span>
+        <strong id="opponent-name">Titan</strong>
+      </div>
+    </section>
 
-      <section class="controls">
-        <p><strong>Move:</strong> A / D &nbsp; <strong>Jump:</strong> W &nbsp; <strong>Attack:</strong> F &nbsp; <strong>Block:</strong> S</p>
-        <p><strong>Restart:</strong> R</p>
-      </section>
-    </main>
-
-    <script src="script.js"></script>
-  </body>
+    <button id="fight-button" class="button button-primary" type="button">FIGHT <span aria-hidden="true">→</span></button>
+    <p class="menu-note">The CPU fighter is chosen at random when you enter the arena.</p>
+  </main>
+  <script src="script.js"></script>
+</body>
 </html>
